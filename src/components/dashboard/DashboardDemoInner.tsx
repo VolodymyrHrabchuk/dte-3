@@ -1,15 +1,19 @@
+// app/dashboard/page.tsx
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
-
 import HiteSummaryCard from "@/components/dashboard/HiteSummaryCard";
 import PlanStep from "@/components/dashboard/PlanStep";
 import UnlockModal from "@/components/dashboard/UnlockModal";
-
-import { PlanProgress, StepState, readPlanProgress } from "@/lib/planProgress";
-import { useProfileStore } from "@/stores/profile";
+import {
+  PlanProgress,
+  StepState,
+  readPlanProgress,
+  resetAllProgress,
+  consumeJustFinishedFlag,
+} from "@/lib/planProgress";
 
 type StepAvail = Exclude<StepState, "locked">;
 
@@ -18,14 +22,9 @@ export default function DashboardDemoInner() {
   const searchParams = useSearchParams();
   const showDiscoverOnly = searchParams.get("view") === "discover";
 
-  // имя пользователя из persist-стора
-  const profileName = useProfileStore((s) => s.name);
-  const greeting = profileName?.trim() ? `Hi, ${profileName}!` : "Hi there!";
-
-  // демонстрационные метрики
-  const [hiteScore] = useState(1074);
-  const [level] = useState<"Rookie" | "Starter">("Starter");
-  const [activeStreak] = useState(6);
+  const [hiteScore] = useState(952);
+  const [level] = useState<"Rookie">("Rookie");
+  const [activeStreak] = useState(5);
 
   const [discoverState, setDiscoverState] = useState<StepAvail>("available");
   const [trainState, setTrainState] = useState<StepState>("locked");
@@ -34,27 +33,24 @@ export default function DashboardDemoInner() {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalFor, setModalFor] = useState<"train" | "execute" | null>(null);
 
+  // 👇 Покажем «All Done» один раз после завершения Execute
+  const [showAllDoneOnce, setShowAllDoneOnce] = useState(false);
+
   const prevDiscoverRef = useRef<string | null>(null);
   const prevTrainRef = useRef<string | null>(null);
 
-  // добавь рядом с импортами/хуками
-  const TRAIN_SEEN_KEY = "__unlock_train_seen";
-  const EXEC_SEEN_KEY = "__unlock_execute_seen";
-
-  const hasSeen = (k: string) => {
-    try {
-      return localStorage.getItem(k) === "1";
-    } catch {
-      return false;
+  // Если только что закончили весь DTE, отобразим «All Done» и тихо сбросим прогресс.
+  useEffect(() => {
+    if (consumeJustFinishedFlag()) {
+      setShowAllDoneOnce(true);
+      // даём UI отрендерить «All Done», затем сбросим прогресс,
+      // но «All Done» останется видимым в этот заход (управляется локальным стейтом).
+      setTimeout(() => {
+        resetAllProgress();
+      }, 120);
     }
-  };
-  const markSeen = (k: string) => {
-    try {
-      localStorage.setItem(k, "1");
-    } catch {}
-  };
+  }, []);
 
-  // ЗАМЕНИ содержание syncFromStorage полностью
   const syncFromStorage = useCallback(() => {
     if (showDiscoverOnly) {
       setDiscoverState("available");
@@ -83,48 +79,36 @@ export default function DashboardDemoInner() {
     setTrainState(t);
     setExecuteState(e);
 
-    // ---- Больше никаких попапов, если всё уже сделано
-    if (d === "completed" && t === "completed" && e === "completed") {
-      prevDiscoverRef.current = d;
-      prevTrainRef.current = t;
-      return;
-    }
-
-    // предыдущие значения (для детекта перехода)
+    // попапы разблокировки: не показываем, если сейчас выводим All Done
     const prevD = prevDiscoverRef.current;
     const prevT = prevTrainRef.current;
 
-    // TRAIN unlocked: Discover стал completed, а Train сейчас available
     if (
+      !showAllDoneOnce &&
+      !showDiscoverOnly &&
       prevD !== "completed" &&
-      d === "completed" &&
-      t === "available" &&
-      !hasSeen(TRAIN_SEEN_KEY)
+      d === "completed"
     ) {
       setModalFor("train");
       setModalVisible(true);
-      markSeen(TRAIN_SEEN_KEY);
     }
-
-    // EXECUTE unlocked: Train стал completed, а Execute сейчас available
     if (
+      !showAllDoneOnce &&
+      !showDiscoverOnly &&
       prevT !== "completed" &&
-      t === "completed" &&
-      e === "available" &&
-      !hasSeen(EXEC_SEEN_KEY)
+      t === "completed"
     ) {
       setModalFor("execute");
       setModalVisible(true);
-      markSeen(EXEC_SEEN_KEY);
     }
 
     prevDiscoverRef.current = d;
     prevTrainRef.current = t;
-  }, [showDiscoverOnly]);
+  }, [showDiscoverOnly, showAllDoneOnce]);
 
-  // Попап один раз при заходе с Discover (?view=discover)
+  // модалка «Go to Train» один раз при заходе с Discover (?view=discover)
   useEffect(() => {
-    if (!showDiscoverOnly) return;
+    if (!showDiscoverOnly || showAllDoneOnce) return;
     const p = readPlanProgress();
     const shouldShow = p.discover === "completed" && p.train === "available";
     const SEEN_KEY = "__train_popup_once";
@@ -135,21 +119,30 @@ export default function DashboardDemoInner() {
         sessionStorage.setItem(SEEN_KEY, "1");
       }, 60);
     }
-  }, [showDiscoverOnly]);
+  }, [showDiscoverOnly, showAllDoneOnce]);
 
   useEffect(() => {
     syncFromStorage();
+
     const onStorage = (e: StorageEvent) => {
       if (!e.key || e.key === "planProgress") syncFromStorage();
     };
     const onVisibility = () => {
       if (document.visibilityState === "visible") syncFromStorage();
     };
+    const onCustom = () => syncFromStorage();
+
     window.addEventListener("storage", onStorage);
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("planprogress:updated", onCustom as EventListener);
+
     return () => {
       window.removeEventListener("storage", onStorage);
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener(
+        "planprogress:updated",
+        onCustom as EventListener
+      );
     };
   }, [syncFromStorage]);
 
@@ -166,15 +159,14 @@ export default function DashboardDemoInner() {
     setModalFor(null);
   };
 
+  const shouldShowAllDoneCard =
+    showAllDoneOnce ||
+    (discoverState === "completed" &&
+      trainState === "completed" &&
+      executeState === "completed");
+
   return (
     <div className='absolute inset-0 flex items-center justify-center'>
-      {/* фон-приложения */}
-      <div className='absolute inset-0 -z-10'>
-        <Image src='/bg.png' alt='' fill priority className='object-cover' />
-        <div className='absolute inset-0 bg-black/40' />
-      </div>
-
-      {/* Мобильный фрейм */}
       <div
         className='w-full max-w-[560px] h-full rounded-[28px] overflow-hidden flex flex-col py-6'
         style={{
@@ -186,15 +178,33 @@ export default function DashboardDemoInner() {
       >
         <div className='flex-1 overflow-auto'>
           <div className='px-2 text-white'>
-            {/* Header */}
             <header className='flex items-center justify-between mb-6'>
-              <h1 className='text-4xl font-extrabold'>{greeting}</h1>
+              <h1 className='text-4xl font-extrabold'>Hi there!</h1>
               <div className='flex items-center gap-4'>
                 <button
                   aria-label='notifications'
                   className='w-10 h-10 rounded-full bg-white/6 grid place-items-center'
                 >
-                  <span className='block w-2 h-2 rounded-full bg-[#FD521B]' />
+                  <svg
+                    width='18'
+                    height='21'
+                    viewBox='0 0 18 21'
+                    fill='none'
+                    xmlns='http://www.w3.org/2000/svg'
+                  >
+                    <path
+                      d='M8.59888 0.774414L8.59895 0.0700662H8.59888V0.774414ZM16.3459 13.5908L17.0503 13.5909L17.0503 13.5908L16.3459 13.5908ZM13.1887 17.2939L13.2885 17.9912L13.2885 17.9912L13.1887 17.2939ZM8.5979 17.6992L8.59788 18.4036L8.5979 18.4036L8.5979 17.6992ZM4.00806 17.2939L3.90825 17.9912L3.90826 17.9912L4.00806 17.2939ZM0.85083 13.5908L0.146482 13.5908L0.146482 13.5909L0.85083 13.5908ZM8.59888 0.774414L8.5988 1.47876C11.6242 1.4791 14.0771 3.93178 14.0771 6.95703H14.7815H15.4858C15.4858 3.15363 12.4021 0.0704866 8.59895 0.0700662L8.59888 0.774414ZM14.7815 6.95703H14.0771V9.07694H14.7815H15.4858V6.95703H14.7815ZM15.7492 11.537L15.155 11.9152C15.4631 12.3991 15.6416 12.973 15.6416 13.5908L16.3459 13.5908L17.0503 13.5908C17.0503 12.697 16.791 11.8619 16.3434 11.1588L15.7492 11.537ZM16.3459 13.5908L15.6416 13.5907C15.6414 15.0931 14.5743 16.3841 13.0889 16.5967L13.1887 17.2939L13.2885 17.9912C15.5046 17.674 17.05 15.7561 17.0503 13.5909L16.3459 13.5908ZM13.1887 17.2939L13.0889 16.5967C11.6862 16.7975 9.95933 16.9949 8.5979 16.9949L8.5979 17.6992L8.5979 18.4036C10.0642 18.4036 11.8729 18.1938 13.2885 17.9912L13.1887 17.2939ZM8.5979 17.6992L8.59792 16.9949C7.2366 16.9948 5.5104 16.7975 4.10786 16.5967L4.00806 17.2939L3.90826 17.9912C5.32367 18.1938 7.13174 18.4035 8.59788 18.4036L8.5979 17.6992ZM4.00806 17.2939L4.10786 16.5967C2.62246 16.3841 1.55539 15.0931 1.55518 13.5907L0.85083 13.5908L0.146482 13.5909C0.146795 15.7561 1.69213 17.674 3.90825 17.9912L4.00806 17.2939ZM0.85083 13.5908L1.55518 13.5908C1.55518 12.9727 1.73383 12.3986 2.04203 11.9145L1.44788 11.5362L0.853722 11.158C0.405917 11.8613 0.146482 12.6968 0.146482 13.5908L0.85083 13.5908ZM2.41626 9.07534H3.12061V6.95703H2.41626H1.71191V9.07534H2.41626ZM2.41626 6.95703H3.12061C3.12061 3.93147 5.57332 1.47876 8.59888 1.47876V0.774414V0.0700662C4.79532 0.0700662 1.71191 3.15347 1.71191 6.95703H2.41626ZM1.44788 11.5362L2.04203 11.9145C2.50797 11.1826 3.12061 10.2069 3.12061 9.07534H2.41626H1.71191C1.71191 9.73637 1.3505 10.3777 0.853722 11.158L1.44788 11.5362ZM14.7815 9.07694H14.0771C14.0771 10.2081 14.6893 11.1835 15.155 11.9152L15.7492 11.537L16.3434 11.1588C15.847 10.3788 15.4858 9.73769 15.4858 9.07694H14.7815Z'
+                      fill='white'
+                      fill-opacity='0.8'
+                    />
+                    <path
+                      d='M10.5547 19.166C10.1341 19.8261 9.41481 20.2612 8.59817 20.2612C7.78153 20.2612 7.06227 19.8261 6.64165 19.166'
+                      stroke='white'
+                      stroke-opacity='0.8'
+                      stroke-width='1.4087'
+                      stroke-linecap='round'
+                    />
+                  </svg>
                 </button>
                 <button
                   aria-label='profile'
@@ -222,7 +232,7 @@ export default function DashboardDemoInner() {
                 level={level}
                 streakDays={activeStreak}
                 weekLabel='This week'
-                plansDone={3}
+                plansDone={2}
                 plansTotal={4}
                 timeSpent='1h 15m'
                 onShowMore={() => {}}
@@ -233,9 +243,7 @@ export default function DashboardDemoInner() {
             <section className='mb-8'>
               <h3 className='text-2xl font-bold mb-4'>Today&apos;s Plan</h3>
 
-              {discoverState === "completed" &&
-              trainState === "completed" &&
-              executeState === "completed" ? (
+              {shouldShowAllDoneCard ? (
                 <div
                   className='rounded-2xl p-8 flex flex-col items-center justify-center text-center'
                   style={{
@@ -311,9 +319,8 @@ export default function DashboardDemoInner() {
         </div>
       </div>
 
-      {/* Unlock modal */}
       <UnlockModal
-        open={modalVisible}
+        open={modalVisible && !showAllDoneOnce}
         kind={modalFor}
         onClose={() => setModalVisible(false)}
         onAction={onModalAction}

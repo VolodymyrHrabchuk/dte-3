@@ -28,28 +28,28 @@ function sanitize(val: unknown): string {
 }
 
 type Body = {
-  // из первого экрана
-  overallRating?: number | null;     // 1..5
-  helpfulRating?: number | null;     // опционально
-  engagingRating?: number | null;    // опционально
-  freeText?: string;                 // если был ввод на первом экране
 
-  // из формы
+  overallRating?: number | null;     
+  helpfulRating?: number | null;     
+  engagingRating?: number | null;    
+  freeText?: string;                
+
+
   lengthChoice?: "long" | "right" | "short" | null;
-  daysPerWeek?: number | null;       // 0..7
-  notes?: string;                    // textarea
+  daysPerWeek?: number | null;      
+  notes?: string;                    
   name?: string;
 
-  // общее
+
   meta?: Record<string, unknown>;
-  sheet?: string; // имя листа
+  sheet?: string; 
 };
 
 export async function POST(req: NextRequest) {
   try {
     const body: Body = await req.json();
 
-    // Базовая валидация
+   
     if (
       body.overallRating != null &&
       (typeof body.overallRating !== "number" ||
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
     const sheetName = (body.sheet?.trim() || process.env.GOOGLE_SHEETS_SHEET_NAME || "Feedback").trim();
     const sheets = getSheetsClient();
 
-    // Создать лист при отсутствии
+
     const metaRes = await sheets.spreadsheets.get({ spreadsheetId });
     const exists = metaRes.data.sheets?.some((s) => s.properties?.title === sheetName);
     if (!exists) {
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
         requestBody: { requests: [{ addSheet: { properties: { title: sheetName } } }] },
       });
 
-      // заголовки
+
       await sheets.spreadsheets.values.append({
         spreadsheetId,
         range: `${quoteA1Sheet(sheetName)}!A:K`,

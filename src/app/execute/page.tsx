@@ -12,15 +12,14 @@ import Image from "next/image";
 export default function ExecutePage() {
   const router = useRouter();
 
-  // шаг 0: тест; шаг 1: карточка "как в компоненте"
   const [step, setStep] = useState<0 | 1>(0);
   const [answer, setAnswer] = useState("");
 
   const progress = useMemo(() => (step === 0 ? 50 : 100), [step]);
-  // было: completeExecute(); router.push("/dashboard");
+
   const finish = () => {
     completeExecute();
-    router.push("/score"); // ⬅️ идём на страницу Score
+    router.push("/score");
   };
   // --- STEP 0 (тест) ---
   if (step === 0) {
@@ -44,7 +43,7 @@ export default function ExecutePage() {
     );
   }
 
-  // --- STEP 1 (карточка как в FlashcardSlide) ---
+  // --- STEP 1  ---
   const card: FlashcardsContent = {
     id: "exec-2",
     type: "input",
@@ -57,7 +56,7 @@ export default function ExecutePage() {
       {/* фоновое блюр-видео как на рефе */}
       <div className='absolute inset-0 -z-10 overflow-hidden' aria-hidden>
         <Image
-          src='/input-bg.png' // ← твоя картинка
+          src='/input-bg.png' 
           alt=''
           fill
           priority
@@ -69,11 +68,11 @@ export default function ExecutePage() {
         <FlashcardSlide
           card={card}
           isActive
-          index={1} // чтобы счётчик показал 2/3
+          index={1} 
           cardsLength={2}
           userInput={answer}
           onUserInputChange={setAnswer}
-          swiper={null} // слайд одиночный, без Swiper
+          swiper={null} 
           onBack={() => setStep(0)}
           onComplete={() => {
             finish();

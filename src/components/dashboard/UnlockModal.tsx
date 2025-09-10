@@ -19,7 +19,7 @@ export default function UnlockModal({
   const title =
     kind === "train" ? "Train Section Unlocked!" : "Execute Section Unlocked!";
 
-  // ⬇️ обновлённый текст для Execute
+
   const desc =
     kind === "train"
       ? "Track And Grow Your Personal Skills — Now Available In Your Dashboard."

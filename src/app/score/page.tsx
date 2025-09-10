@@ -36,7 +36,7 @@ function CountUp({
   return <span className='tabular-nums'>{format(val)}</span>;
 }
 
-// ===== small icons (встроенные) =====
+// ===== small icons  =====
 function FireIcon() {
   return (
     <svg width='18' height='20' viewBox='0 0 18 20' fill='none'>
@@ -76,7 +76,7 @@ function HITEIcon() {
 
 // ===== Page =====
 export default function ScorePage() {
-  // значения «до/после» — просто демо
+
   const HITE_BASE = 952;
   const completedVal = 100;
   const streakVal = 7;
@@ -95,14 +95,14 @@ export default function ScorePage() {
 
   return (
     <div className='min-h-dvh relative text-white'>
-      {/* фон-картинка */}
+     
       <div className='absolute inset-0 -z-10'>
         <Image src='/bg.png' alt='' fill priority className='object-cover' />
         <div className='absolute inset-0 bg-black/55' />
       </div>
 
       <div className='max-w-md mx-auto px-6 pt-3 pb-10 flex flex-col min-h-dvh'>
-        {/* top headline (меняется между экранами) */}
+
         <AnimatePresence mode='wait'>
           {!showFeedback ? (
             <motion.div
@@ -141,7 +141,7 @@ export default function ScorePage() {
           )}
         </AnimatePresence>
 
-        {/* ===== STATS CARD (общая для обоих экранов) ===== */}
+        {/* ===== STATS CARD  ===== */}
         <motion.div
           className='w-full mb-3 p-4 bg-black/30 border border-white/20 rounded-2xl'
           initial={{ opacity: 0, y: 14, scale: 0.98 }}
@@ -189,7 +189,7 @@ export default function ScorePage() {
               <div className='flex items-center gap-2'>
                 <HITEIcon />
                 <span className='font-medium text-lg'>HITE Score</span>
-                {/* мини бейдж уровня */}
+            
                 <span className='ml-1 text-[10px] px-2 py-1 rounded-2xl bg-[#363391] text-[#B2FF8B]'>
                   {showFeedback ? "🐤 Starter" : "🌱 Rookie"}
                 </span>
@@ -204,7 +204,7 @@ export default function ScorePage() {
               </span>
             </div>
 
-            {/* подробности — только на 2-м экране */}
+            
             <AnimatePresence initial={false}>
               {showFeedback && (
                 <motion.div
@@ -240,7 +240,7 @@ export default function ScorePage() {
           </div>
         </motion.div>
 
-        {/* NEXT */}
+
         <div className='mt-auto pt-8'>
           <Link href='/feedback' className='block'>
             <Button variant='text' className='w-full'>

@@ -21,7 +21,6 @@ export default function FeedbackPage() {
 
   const handleBack = () => router.back();
 
-  // Всегда число: если ничего не выбрано — 0
   const overall: number = useMemo(() => {
     const arr = [helpful, engaging].filter((n) => n > 0);
     if (!arr.length) return 0;
@@ -30,10 +29,10 @@ export default function FeedbackPage() {
   }, [helpful, engaging]);
 
   const handleNext = () => {
-    setOverallRating(overall); // number
-    setHelpfulRating(helpful); // number
-    setEngagingRating(engaging); // number
-    setFreeText(""); // текста на этом экране нет
+    setOverallRating(overall);
+    setHelpfulRating(helpful);
+    setEngagingRating(engaging);
+    setFreeText("");
   };
 
   return (

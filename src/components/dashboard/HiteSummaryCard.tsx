@@ -6,14 +6,14 @@ import { Calendar, Clock, ChevronDown } from "lucide-react";
 import * as React from "react";
 
 type Props = {
-  score: number; // 952
-  level: "Rookie" | string; // "Rookie"
-  streakDays: number; // 5
-  weekLabel?: string; // "This week"
-  plansDone?: number; // 2
-  plansTotal?: number; // 4
-  timeSpent?: string; // "1h 15m"
-  onShowMore?: () => void; // клик по "Show More"
+  score: number; 
+  level: "Rookie" | string; 
+  streakDays: number; 
+  weekLabel?: string; 
+  plansDone?: number; 
+  plansTotal?: number; 
+  timeSpent?: string; 
+  onShowMore?: () => void; 
 };
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -39,7 +39,7 @@ export default function HiteSummaryCard({
         boxShadow: "inset 0 1px 0 rgba(255,255,255,0.02)",
       }}
     >
-      {/* декоративный бэкграунд как на рефе */}
+    
       <div
         aria-hidden
         className='absolute inset-0 pointer-events-none'
@@ -53,18 +53,18 @@ export default function HiteSummaryCard({
       />
 
       <div className='relative z-10 p-[18px] text-white'>
-        {/* === Верхняя строка: иконка + заголовок + бейдж, справа — счёт === */}
+
         <div className='flex items-center justify-between mb-3'>
           <div className='flex items-center gap-2'>
             <div className='w-10 h-10 rounded-lg flex items-center justify-center'>
-              {/* ваша иконка */}
+  
               <Image src='/icon1.png' alt='HITE' width={28} height={28} />
             </div>
 
             <div className='flex items-center gap-2'>
               <span className='text-lg font-medium'>HITE Score</span>
 
-              {/* бейдж уровня с анимацией */}
+
               <div className='mt-1 inline-block text-[10px]'>
                 <AnimatePresence mode='wait' initial={false}>
                   <motion.span
@@ -80,7 +80,7 @@ export default function HiteSummaryCard({
                       border: "1px solid rgba(255,255,255,0.08)",
                     }}
                   >
-                    {/* sprout-emoji как на макете */}
+         
                     🌱 {level}
                   </motion.span>
                 </AnimatePresence>
@@ -98,7 +98,7 @@ export default function HiteSummaryCard({
           </motion.span>
         </div>
 
-        {/* === Разделитель === */}
+
         <div
           className='my-2'
           style={{
@@ -131,7 +131,6 @@ export default function HiteSummaryCard({
           <span className='text-[15px] font-semibold'>{streakDays} days</span>
         </div>
 
-        {/* === Нижняя тёмная полоска со статусами недели === */}
         <div
           className='mt-1 rounded-xl px-3 py-3 flex items-center justify-between'
           style={{
@@ -151,7 +150,7 @@ export default function HiteSummaryCard({
 
             <div className='flex items-center gap-1.5 text-white/80'>
               <div className='w-5 h-5 rounded-full bg-white/6 flex items-center justify-center text-xs'>
-                {/* маленькая “точка-галка” */}
+              
                 <div
                   className='w-1.5 h-1.5 rounded-full'
                   style={{ backgroundColor: "rgba(255,255,255,0.8)" }}

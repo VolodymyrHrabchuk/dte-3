@@ -46,7 +46,7 @@ const Timer: React.FC<TimerProps> = ({
   const dingUnlockedRef = useRef(false);
 
   useEffect(() => {
-    const a = new Audio("/ding.mp3"); // положи файл в /public/ding.mp3
+    const a = new Audio("/ding.mp3"); 
     a.preload = "auto";
     a.volume = 0.8;
     dingRef.current = a;
@@ -69,7 +69,7 @@ const Timer: React.FC<TimerProps> = ({
       a.muted = false;
       dingUnlockedRef.current = true;
     } catch {
-      // игнор — попробуем на следующем жесте
+
     }
   };
 
@@ -84,21 +84,20 @@ const Timer: React.FC<TimerProps> = ({
     }
   };
 
-  // State
+
   const [isRunning, setIsRunning] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [displaySeconds, setDisplaySeconds] = useState(0);
   const [rotationCount, setRotationCount] = useState(0);
-  const [currentAngle, setCurrentAngle] = useState(-90); // Start at top
+  const [currentAngle, setCurrentAngle] = useState(-90);
 
-  // Тайминг
+
   const startedAtRef = useRef<number | null>(null);
   const rafActiveRef = useRef(false);
   const lastWholeSecRef = useRef(0);
   const accumElapsedRef = useRef(0);
 
-  // mm:ss
   const mmss = useMemo(() => {
     const m = Math.floor(displaySeconds / 60)
       .toString()
@@ -107,16 +106,16 @@ const Timer: React.FC<TimerProps> = ({
     return `${m}:${s}`;
   }, [displaySeconds]);
 
-  // Кадр прогресса
+
   const setProgressFrame = (elapsedMs: number) => {
     const totalMs = timer * 1000;
     const clamped = Math.min(elapsedMs, totalMs);
 
-    // 90° за 5с = 18°/с → полный круг за 20с
+    
     const degPerSec = 18;
-    const rotationPeriodMs = (360 / degPerSec) * 1000; // 20000 мс
-    const turn = Math.floor(clamped / rotationPeriodMs); // 0,1,2,...
-    const phase = (clamped % rotationPeriodMs) / rotationPeriodMs; // 0..1
+    const rotationPeriodMs = (360 / degPerSec) * 1000; 
+    const turn = Math.floor(clamped / rotationPeriodMs);
+    const phase = (clamped % rotationPeriodMs) / rotationPeriodMs; 
 
     const angleDeg = -90 + phase * 360;
     const angleRad = (angleDeg * Math.PI) / 180;
@@ -177,7 +176,7 @@ const Timer: React.FC<TimerProps> = ({
     }
   };
 
-  // Дыхание — создать таймлайн только если его нет
+  
   const ensureBreathTimeline = () => {
     const el = breathCircleRef.current;
     if (!el) return;
@@ -220,11 +219,11 @@ const Timer: React.FC<TimerProps> = ({
     if (isPaused) tl.pause();
   };
 
-  // rAF-цикл
+
   useEffect(() => {
     if (!isRunning || isPaused) return;
 
-    // стартовая анимация
+
     if (overlayRef.current && displaySeconds === 0) {
       gsap.fromTo(
         overlayRef.current,

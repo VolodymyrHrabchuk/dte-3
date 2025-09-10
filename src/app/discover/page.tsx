@@ -1,11 +1,19 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Screen from "@/components/Screen";
 import OptionButton from "@/components/OptionButton";
-import { Focus, Helper, useDiscover } from "@/stores/discover";
-import { useState } from "react";
 import { completeDiscoverMakeTrainAvailable } from "@/lib/planProgress";
-import { useRouter } from "next/navigation";
+
+// Локальные типы (без Zustand)
+type Focus = "self-confidence" | "inner-strength" | "mental-toughness";
+type Helper =
+  | "breakthrough"
+  | "goals-progress"
+  | "focused"
+  | "habits"
+  | "lead-improve";
 
 const focusLabels: Record<Focus, string> = {
   "self-confidence": "Self Confidence",
@@ -23,11 +31,20 @@ const helperLabels: Record<Helper, string> = {
 
 const progressByStep: Record<1 | 2 | 3, number> = { 1: 25, 2: 65, 3: 100 };
 
+// Явные функции, возвращающие корректный union
+const incStep = (s: 1 | 2 | 3): 1 | 2 | 3 => (s === 1 ? 2 : s === 2 ? 3 : 3);
+const decStep = (s: 1 | 2 | 3): 1 | 2 | 3 => (s === 3 ? 2 : s === 2 ? 1 : 1);
+
 export default function DiscoverPage() {
   const router = useRouter();
-  const { step, setFocus, setRating, setHelper, prev } = useDiscover();
-  const [flashIdx, setFlashIdx] = useState<number | null>(null);
 
+  // локальное состояние
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [focus, setFocus] = useState<Focus | null>(null);
+  const [rating, setRating] = useState<1 | 2 | 3 | 4 | 5 | null>(null);
+
+  // flash-подсветка выбранного варианта
+  const [flashIdx, setFlashIdx] = useState<number | null>(null);
   const flashThen = (i: number, fn: () => void) => {
     setFlashIdx(i);
     setTimeout(() => {
@@ -36,6 +53,9 @@ export default function DiscoverPage() {
     }, 120);
   };
 
+  const next = () => setStep((s) => incStep(s));
+  const prev = () => setStep((s) => decStep(s));
+
   if (step === 1) {
     return (
       <Screen progress={progressByStep[1]} onBack={prev}>
@@ -43,16 +63,23 @@ export default function DiscoverPage() {
           What do you want to focus on today?
         </div>
         <div className='space-y-3'>
-          {Object.entries(focusLabels).map(([key, label], i) => (
-            <OptionButton
-              key={key}
-              align='center'
-              selected={flashIdx === i}
-              onClick={() => flashThen(i, () => setFocus(key as Focus))}
-            >
-              {label}
-            </OptionButton>
-          ))}
+          {(Object.keys(focusLabels) as Array<keyof typeof focusLabels>).map(
+            (key, i) => (
+              <OptionButton
+                key={key}
+                align='center'
+                selected={flashIdx === i}
+                onClick={() =>
+                  flashThen(i, () => {
+                    setFocus(key as Focus);
+                    next();
+                  })
+                }
+              >
+                {focusLabels[key]}
+              </OptionButton>
+            )
+          )}
         </div>
       </Screen>
     );
@@ -62,9 +89,12 @@ export default function DiscoverPage() {
     return (
       <Screen progress={progressByStep[2]} onBack={prev}>
         <div className='text-xl font-medium mb-8'>
-          How are you feeling about your Self Confidence today? (for the purpose
-          of this demo, select something 4 or higher)
+          How are you feeling about your Self Confidence today?{" "}
+          <span className='block text-sm text-white/60'>
+            (for the purpose of this demo, select something 4 or higher)
+          </span>
         </div>
+
         <div className='space-y-3'>
           {[5, 4, 3, 2, 1].map((rank, i) => (
             <OptionButton
@@ -72,7 +102,10 @@ export default function DiscoverPage() {
               leading={rank}
               selected={flashIdx === i}
               onClick={() =>
-                flashThen(i, () => setRating(rank as 1 | 2 | 3 | 4 | 5))
+                flashThen(i, () => {
+                  setRating(rank as 1 | 2 | 3 | 4 | 5);
+                  next();
+                })
               }
             >
               {rank === 5 && "My self-belief is on fire today."}
@@ -98,23 +131,37 @@ export default function DiscoverPage() {
       </div>
 
       <div className='space-y-3'>
-        {Object.entries(helperLabels).map(([key, label], i) => (
-          <OptionButton
-            key={key}
-            align='left'
-            selected={flashIdx === i}
-            onClick={() =>
-              flashThen(i, () => {
-                setHelper(key as Helper);
-                // сохранить прогресс плана и перейти на дашборд
-                completeDiscoverMakeTrainAvailable();
-                router.push("/dashboard?view=discover");
-              })
-            }
-          >
-            {label}
-          </OptionButton>
-        ))}
+        {(Object.keys(helperLabels) as Array<keyof typeof helperLabels>).map(
+          (key, i) => (
+            <OptionButton
+              key={key}
+              align='left'
+              selected={flashIdx === i}
+              onClick={() =>
+                flashThen(i, () => {
+                  // сохраняем выбор в answers и открываем Train
+                  try {
+                    completeDiscoverMakeTrainAvailable();
+                    const stored = JSON.parse(
+                      localStorage.getItem("answers") || "[]"
+                    );
+                    stored.push({
+                      focus,
+                      rating,
+                      helper: key, // тут сохраняем выбранный helper
+                      ts: Date.now(),
+                    });
+                    localStorage.setItem("answers", JSON.stringify(stored));
+                  } catch {}
+
+                  router.push("/dashboard?view=discover");
+                })
+              }
+            >
+              {helperLabels[key]}
+            </OptionButton>
+          )
+        )}
       </div>
     </Screen>
   );

@@ -12,7 +12,6 @@ import { useProfileStore } from "@/stores/profile";
 import { useRouter } from "next/navigation";
 
 function sanitizeName(input: string): string {
-  // оставляем буквы/цифры/пробел/апострофы и ограничим длину
   return input
     .replace(/[^\p{L}\p{N}\s'’-]/gu, "")
     .trim()
@@ -52,7 +51,7 @@ export default function FeedbackFormPage() {
         engagingRating: fb.engagingRating,
         freeText: fb.freeText,
         lengthChoice,
-        daysPerWeek: days!, // canSubmit гарантирует не null
+        daysPerWeek: days!,
         notes,
         name: cleaned,
         sheet: "Feedback",
@@ -62,10 +61,7 @@ export default function FeedbackFormPage() {
         },
       });
 
-      // 1) Сохраняем имя (persist → localStorage)
       setProfileName(cleaned);
-
-      // 2) Отмечаем, что все шаги завершены — дашборд покажет «All Done»
       localStorage.setItem(
         "planProgress",
         JSON.stringify({
@@ -91,11 +87,11 @@ export default function FeedbackFormPage() {
         <Image src='/bg.png' alt='' fill priority className='object-cover' />
       </div>
 
-      <div className='max-w-md mx-auto px-4 pt-6 pb-[calc(env(safe-area-inset-bottom,0px)+24px)]'>
+      <div className='max-w-md mx-auto px-4 pb-[calc(env(safe-area-inset-bottom,0px)+24px)]'>
         <BackButton onClick={() => history.back()} className='mt-2 mb-4' />
 
         {/* Q1 */}
-        <h2 className='text-[20px] font-medium mb-4'>
+        <h2 className='text-base font-medium mb-4'>
           What did you think of the length?
         </h2>
         <div className='space-y-3 mb-8'>
@@ -126,10 +122,8 @@ export default function FeedbackFormPage() {
         </div>
 
         {/* Q2 */}
-        <h2 className='text-[20px] font-medium mb-3'>
-          How many days a week could you see yourself
-          <br />
-          doing trainings like this?
+        <h2 className='text-base font-medium mb-3'>
+          How many days a week could you see yourself doing trainings like this?
         </h2>
         <div className='flex items-center gap-3 mb-10'>
           {Array.from({ length: 8 }, (_, i) => i).map((n) => {
@@ -159,7 +153,7 @@ export default function FeedbackFormPage() {
             value={notes}
             onChange={(e) => setNotes(e.target.value.slice(0, 1000))}
             placeholder='Type your answer...'
-            rows={4}
+            rows={2}
             className='w-full resize-none rounded-2xl bg-white/5 border border-white/20 px-4 py-3 outline-none placeholder:text-white/40'
           />
           <div className='absolute right-3 bottom-2 text-xs text-white/50'>

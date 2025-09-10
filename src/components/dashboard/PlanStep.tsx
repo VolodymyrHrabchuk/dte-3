@@ -14,7 +14,7 @@ export default function PlanStep({
   title: "Discover" | "Train" | "Execute";
   iconSrc: string;
   minutes?: number;
-  state: StepState | "available" | "completed"; // Discover не бывает locked в демо
+  state: StepState | "available" | "completed"; 
   accent?: boolean;
   onStart?: () => void;
 }) {
