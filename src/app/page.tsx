@@ -23,7 +23,7 @@ export default function Home() {
       >
         <div className='absolute inset-0 grid place-items-center pointer-events-none'>
           <Image
-            src='/lock.png'
+            src='/lockscreen.png'
             alt='HITE EQ'
             width={320}
             height={120}
