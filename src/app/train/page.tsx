@@ -1,4 +1,3 @@
-// app/train/page.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -13,6 +12,49 @@ export default function TrainPage() {
   const [activeIndex, setActiveIndex] = useState(0);
 
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+
+  // 🔊 swipe sound
+  const swipeAudioRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    const a = new Audio("/swipe.mp3");
+    a.preload = "auto";
+    a.volume = 0.5;
+    // @ts-expect-error playsInline есть, но не в типах
+    a.playsInline = true;
+    swipeAudioRef.current = a;
+
+    const unlock = () => {
+      const el = swipeAudioRef.current;
+      if (!el) return;
+      el.muted = true;
+      el.play()
+        .then(() => {
+          el.pause();
+          el.currentTime = 0;
+          el.muted = false;
+        })
+        .catch(() => {});
+    };
+    window.addEventListener("pointerdown", unlock, { once: true });
+
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      if (swipeAudioRef.current) {
+        swipeAudioRef.current.pause();
+        swipeAudioRef.current.src = "";
+        swipeAudioRef.current = null;
+      }
+    };
+  }, []);
+
+  const playSwipe = () => {
+    const a = swipeAudioRef.current;
+    if (!a) return;
+    try {
+      a.currentTime = 0;
+      a.play().catch(() => {});
+    } catch {}
+  };
 
   const flashcards: FlashcardsContent[] = useMemo(
     () => [
@@ -50,6 +92,7 @@ export default function TrainPage() {
 
   const handleSlideChange = (index: number) => {
     setActiveIndex(index);
+    playSwipe();
   };
 
   const handleComplete = () => {

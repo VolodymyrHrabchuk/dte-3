@@ -33,18 +33,14 @@ export default function DashboardDemoInner() {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalFor, setModalFor] = useState<"train" | "execute" | null>(null);
 
-  // 👇 Покажем «All Done» один раз после завершения Execute
   const [showAllDoneOnce, setShowAllDoneOnce] = useState(false);
 
   const prevDiscoverRef = useRef<string | null>(null);
   const prevTrainRef = useRef<string | null>(null);
 
-  // Если только что закончили весь DTE, отобразим «All Done» и тихо сбросим прогресс.
   useEffect(() => {
     if (consumeJustFinishedFlag()) {
       setShowAllDoneOnce(true);
-      // даём UI отрендерить «All Done», затем сбросим прогресс,
-      // но «All Done» останется видимым в этот заход (управляется локальным стейтом).
       setTimeout(() => {
         resetAllProgress();
       }, 120);
@@ -79,7 +75,6 @@ export default function DashboardDemoInner() {
     setTrainState(t);
     setExecuteState(e);
 
-    // попапы разблокировки: не показываем, если сейчас выводим All Done
     const prevD = prevDiscoverRef.current;
     const prevT = prevTrainRef.current;
 
@@ -106,7 +101,6 @@ export default function DashboardDemoInner() {
     prevTrainRef.current = t;
   }, [showDiscoverOnly, showAllDoneOnce]);
 
-  // модалка «Go to Train» один раз при заходе с Discover (?view=discover)
   useEffect(() => {
     if (!showDiscoverOnly || showAllDoneOnce) return;
     const p = readPlanProgress();
@@ -168,15 +162,14 @@ export default function DashboardDemoInner() {
   return (
     <div className='absolute inset-0 flex items-center justify-center'>
       <div
-        className='w-full max-w-[560px] h-full rounded-[28px] overflow-hidden flex flex-col py-6'
+        className='w-full max-w-[560px] h-full  overflow-hidden flex flex-col py-6'
         style={{
-          background:
-            "linear-gradient(180deg, rgba(11,17,37,0.75), rgba(0,0,0,0.65))",
+          background: "url('/bg.png') center/cover",
           border: "1px solid rgba(255,255,255,0.04)",
           boxShadow: "0 30px 60px rgba(0,0,0,0.75)",
         }}
       >
-        <div className='flex-1 overflow-auto'>
+        <div className='flex-1 '>
           <div className='px-2 text-white'>
             <header className='flex items-center justify-between mb-6'>
               <h1 className='text-4xl font-extrabold'>Hi there!</h1>
@@ -195,14 +188,14 @@ export default function DashboardDemoInner() {
                     <path
                       d='M8.59888 0.774414L8.59895 0.0700662H8.59888V0.774414ZM16.3459 13.5908L17.0503 13.5909L17.0503 13.5908L16.3459 13.5908ZM13.1887 17.2939L13.2885 17.9912L13.2885 17.9912L13.1887 17.2939ZM8.5979 17.6992L8.59788 18.4036L8.5979 18.4036L8.5979 17.6992ZM4.00806 17.2939L3.90825 17.9912L3.90826 17.9912L4.00806 17.2939ZM0.85083 13.5908L0.146482 13.5908L0.146482 13.5909L0.85083 13.5908ZM8.59888 0.774414L8.5988 1.47876C11.6242 1.4791 14.0771 3.93178 14.0771 6.95703H14.7815H15.4858C15.4858 3.15363 12.4021 0.0704866 8.59895 0.0700662L8.59888 0.774414ZM14.7815 6.95703H14.0771V9.07694H14.7815H15.4858V6.95703H14.7815ZM15.7492 11.537L15.155 11.9152C15.4631 12.3991 15.6416 12.973 15.6416 13.5908L16.3459 13.5908L17.0503 13.5908C17.0503 12.697 16.791 11.8619 16.3434 11.1588L15.7492 11.537ZM16.3459 13.5908L15.6416 13.5907C15.6414 15.0931 14.5743 16.3841 13.0889 16.5967L13.1887 17.2939L13.2885 17.9912C15.5046 17.674 17.05 15.7561 17.0503 13.5909L16.3459 13.5908ZM13.1887 17.2939L13.0889 16.5967C11.6862 16.7975 9.95933 16.9949 8.5979 16.9949L8.5979 17.6992L8.5979 18.4036C10.0642 18.4036 11.8729 18.1938 13.2885 17.9912L13.1887 17.2939ZM8.5979 17.6992L8.59792 16.9949C7.2366 16.9948 5.5104 16.7975 4.10786 16.5967L4.00806 17.2939L3.90826 17.9912C5.32367 18.1938 7.13174 18.4035 8.59788 18.4036L8.5979 17.6992ZM4.00806 17.2939L4.10786 16.5967C2.62246 16.3841 1.55539 15.0931 1.55518 13.5907L0.85083 13.5908L0.146482 13.5909C0.146795 15.7561 1.69213 17.674 3.90825 17.9912L4.00806 17.2939ZM0.85083 13.5908L1.55518 13.5908C1.55518 12.9727 1.73383 12.3986 2.04203 11.9145L1.44788 11.5362L0.853722 11.158C0.405917 11.8613 0.146482 12.6968 0.146482 13.5908L0.85083 13.5908ZM2.41626 9.07534H3.12061V6.95703H2.41626H1.71191V9.07534H2.41626ZM2.41626 6.95703H3.12061C3.12061 3.93147 5.57332 1.47876 8.59888 1.47876V0.774414V0.0700662C4.79532 0.0700662 1.71191 3.15347 1.71191 6.95703H2.41626ZM1.44788 11.5362L2.04203 11.9145C2.50797 11.1826 3.12061 10.2069 3.12061 9.07534H2.41626H1.71191C1.71191 9.73637 1.3505 10.3777 0.853722 11.158L1.44788 11.5362ZM14.7815 9.07694H14.0771C14.0771 10.2081 14.6893 11.1835 15.155 11.9152L15.7492 11.537L16.3434 11.1588C15.847 10.3788 15.4858 9.73769 15.4858 9.07694H14.7815Z'
                       fill='white'
-                      fill-opacity='0.8'
+                      fillOpacity='0.8'
                     />
                     <path
                       d='M10.5547 19.166C10.1341 19.8261 9.41481 20.2612 8.59817 20.2612C7.78153 20.2612 7.06227 19.8261 6.64165 19.166'
                       stroke='white'
-                      stroke-opacity='0.8'
-                      stroke-width='1.4087'
-                      stroke-linecap='round'
+                      strokeOpacity='0.8'
+                      strokeWidth='1.4087'
+                      strokeLinecap='round'
                     />
                   </svg>
                 </button>

@@ -6,17 +6,67 @@ import { Calendar, Clock, ChevronDown } from "lucide-react";
 import * as React from "react";
 
 type Props = {
-  score: number; 
-  level: "Rookie" | string; 
-  streakDays: number; 
-  weekLabel?: string; 
-  plansDone?: number; 
-  plansTotal?: number; 
-  timeSpent?: string; 
-  onShowMore?: () => void; 
+  score: number;
+  level: "Rookie" | string;
+  streakDays: number;
+  weekLabel?: string;
+  plansDone?: number;
+  plansTotal?: number;
+  timeSpent?: string;
+  onShowMore?: () => void;
+};
+
+type StoredAnswer = {
+  questionId: string | number;
+  score: number;
+  score_type: string;
+  answer: string | null;
+  isCorrect?: boolean;
+  gradable?: boolean;
 };
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+
+const toInt = (v: string | null, def = 0) => {
+  const n = parseInt(v ?? "", 10);
+  return Number.isFinite(n) ? n : def;
+};
+
+function computeKcBonusFallback(): number {
+  try {
+    const stored: StoredAnswer[] = JSON.parse(
+      localStorage.getItem("answers") || "[]"
+    );
+    const gradable = stored.filter((a) => a.gradable);
+    if (gradable.length === 0) return 0;
+    const allCorrect = gradable.every((a) => a.isCorrect === true);
+    return allCorrect ? 15 : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function computeFromLS(fallbackScore: number, fallbackLevel: string) {
+  const base = toInt(localStorage.getItem("hiteBase"), fallbackScore);
+  const dteCompleted = toInt(localStorage.getItem("dteCompletedPoints"), 100);
+  const dteStreak = toInt(localStorage.getItem("dteStreakPoints"), 7);
+  const kcBonus =
+    localStorage.getItem("kcCorrectBonus") !== null
+      ? toInt(localStorage.getItem("kcCorrectBonus"), 0)
+      : computeKcBonusFallback();
+
+  const finalScore = base + dteCompleted + dteStreak + kcBonus;
+
+  const saved = localStorage.getItem("level");
+  const derived =
+    dteCompleted + dteStreak + kcBonus > 0 ? "Starter" : fallbackLevel;
+
+  return {
+    finalScore,
+    badge: saved ?? derived,
+  };
+}
+
 export default function HiteSummaryCard({
   score,
   level,
@@ -27,6 +77,39 @@ export default function HiteSummaryCard({
   timeSpent = "1h 15m",
   onShowMore,
 }: Props) {
+  const [finalScore, setFinalScore] = React.useState<number>(score);
+  const [badge, setBadge] = React.useState<string>(level);
+
+  const recalc = React.useCallback(() => {
+    try {
+      const { finalScore, badge } = computeFromLS(score, level);
+      setFinalScore(finalScore);
+      setBadge(badge);
+    } catch {
+      setFinalScore(score);
+      setBadge(level);
+    }
+  }, [score, level]);
+
+  React.useEffect(() => {
+    recalc();
+    const onVis = () => document.visibilityState === "visible" && recalc();
+    const onStorage = () => recalc();
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("hite:score-updated", recalc as EventListener);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("hite:score-updated", recalc as EventListener);
+    };
+  }, [recalc]);
+
+  const isRookie = (badge || "").toLowerCase() === "rookie";
+  const badgeBg = isRookie ? "#363391" : "#924AAB";
+  const badgeFg = isRookie ? "#B2FF8B" : "#FFFF00";
+  const badgeEmoji = isRookie ? "🌱" : "🐤";
+
   return (
     <motion.div
       className='relative w-full rounded-2xl overflow-hidden border border-white/10'
@@ -39,7 +122,6 @@ export default function HiteSummaryCard({
         boxShadow: "inset 0 1px 0 rgba(255,255,255,0.02)",
       }}
     >
-    
       <div
         aria-hidden
         className='absolute inset-0 pointer-events-none'
@@ -53,35 +135,31 @@ export default function HiteSummaryCard({
       />
 
       <div className='relative z-10 p-[18px] text-white'>
-
         <div className='flex items-center justify-between mb-3'>
           <div className='flex items-center gap-2'>
             <div className='w-10 h-10 rounded-lg flex items-center justify-center'>
-  
               <Image src='/icon1.png' alt='HITE' width={28} height={28} />
             </div>
 
             <div className='flex items-center gap-2'>
               <span className='text-lg font-medium'>HITE Score</span>
 
-
               <div className='mt-1 inline-block text-[10px]'>
                 <AnimatePresence mode='wait' initial={false}>
                   <motion.span
-                    key={level}
+                    key={badge}
                     initial={{ opacity: 0, y: 6, scale: 0.95, rotateX: -40 }}
                     animate={{ opacity: 1, y: 0, scale: 1, rotateX: 0 }}
                     exit={{ opacity: 0, y: -6, scale: 0.95, rotateX: 40 }}
                     transition={{ duration: 0.35, ease: EASE }}
                     className='inline-flex items-center gap-1 px-2 py-1 rounded-2xl'
                     style={{
-                      backgroundColor: "#363391",
-                      color: "#B2FF8B",
+                      backgroundColor: badgeBg,
+                      color: badgeFg,
                       border: "1px solid rgba(255,255,255,0.08)",
                     }}
                   >
-         
-                    🌱 {level}
+                    {badgeEmoji} {badge}
                   </motion.span>
                 </AnimatePresence>
               </div>
@@ -94,10 +172,9 @@ export default function HiteSummaryCard({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: EASE, delay: 0.35 }}
           >
-            {score}
+            {finalScore.toLocaleString()}
           </motion.span>
         </div>
-
 
         <div
           className='my-2'
@@ -112,13 +189,7 @@ export default function HiteSummaryCard({
         <div className='flex items-center justify-between mb-3'>
           <div className='flex items-center gap-2'>
             <div className='w-8 h-8 rounded-full bg-white/6 flex items-center justify-center'>
-              <svg
-                width='18'
-                height='20'
-                viewBox='0 0 18 20'
-                fill='none'
-                xmlns='http://www.w3.org/2000/svg'
-              >
+              <svg width='18' height='20' viewBox='0 0 18 20' fill='none'>
                 <path
                   d='M10.1123 19.7956C13.3272 19.1512 17.484 16.8385 17.484 10.858C17.484 5.41581 13.5004 1.79182 10.636 0.12664C10.0003 -0.242859 9.25623 0.243078 9.25623 0.978287V2.85883C9.25623 4.34173 8.63275 7.04852 6.90034 8.17437C6.01585 8.74918 5.06061 7.88886 4.95311 6.8395L4.86484 5.97781C4.76223 4.97607 3.742 4.36796 2.94138 4.97871C1.50307 6.07592 0 7.99727 0 10.858C0 18.1716 5.43947 20 8.1592 20C8.31739 20 8.48364 19.9953 8.6567 19.9853C7.31377 19.8705 5.14235 19.0373 5.14235 16.3429C5.14235 14.2353 6.67999 12.8094 7.84828 12.1163C8.16249 11.9299 8.53025 12.1719 8.53025 12.5373V13.1432C8.53025 13.607 8.70961 14.3319 9.13655 14.8282C9.61968 15.3897 10.3288 14.8015 10.386 14.0629C10.4041 13.8299 10.6384 13.6814 10.8402 13.7993C11.4997 14.1848 12.3416 15.0083 12.3416 16.3429C12.3416 18.4492 11.1805 19.4181 10.1123 19.7956Z'
                   fill='#E4782A'
@@ -150,7 +221,6 @@ export default function HiteSummaryCard({
 
             <div className='flex items-center gap-1.5 text-white/80'>
               <div className='w-5 h-5 rounded-full bg-white/6 flex items-center justify-center text-xs'>
-              
                 <div
                   className='w-1.5 h-1.5 rounded-full'
                   style={{ backgroundColor: "rgba(255,255,255,0.8)" }}
