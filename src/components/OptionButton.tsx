@@ -19,7 +19,7 @@ export default function OptionButton({
   ...rest
 }: Props) {
   const height =
-    size === "sm" ? "h-[56px]" : size === "lg" ? "h-[76px]" : "h-[68px]";
+    size === "sm" ? "h-[46px]" : size === "lg" ? "h-[76px]" : "h-[68px]";
   const leadingCls =
     size === "sm"
       ? "w-9 h-9 text-[14px] mr-2.5"

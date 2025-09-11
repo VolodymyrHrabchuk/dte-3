@@ -25,9 +25,8 @@ export default function Home() {
           <Image
             src='/lockscreen.png'
             alt='HITE EQ'
-            width={320}
-            height={120}
-            className='opacity-90'
+            fill
+            className='object-cover'
             priority
           />
         </div>

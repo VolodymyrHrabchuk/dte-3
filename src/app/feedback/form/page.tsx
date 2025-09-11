@@ -54,7 +54,7 @@ export default function FeedbackFormPage() {
         daysPerWeek: days!,
         notes,
         name: cleaned,
-        sheet: "Feedback",
+        sheet: "DTE3",
         meta: {
           page: "feedback/form",
           appVersion: process.env.NEXT_PUBLIC_APP_VERSION || "demo",
