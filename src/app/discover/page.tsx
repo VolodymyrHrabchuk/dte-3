@@ -94,7 +94,7 @@ export default function DiscoverPage() {
             <OptionButton
               key={rank}
               leading={rank}
-              selected={flashIdx === i}
+              selected={flashIdx === i || rank === 5}
               onClick={() => {
                 if (rank >= 4) {
                   flashThen(i, () => {
@@ -130,7 +130,7 @@ export default function DiscoverPage() {
             <OptionButton
               key={key}
               align='left'
-              selected={flashIdx === i}
+              selected={flashIdx === i || key === "lead-improve"} 
               onClick={() =>
                 flashThen(i, () => {
                   try {

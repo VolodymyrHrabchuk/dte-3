@@ -6,7 +6,7 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   leading?: string | number;
   selected?: boolean;
   align?: "left" | "center";
-  size?: "sm" | "md" | "lg"; // NEW
+  size?: "sm" | "md" | "lg";
 };
 
 export default function OptionButton({
@@ -27,7 +27,7 @@ export default function OptionButton({
       ? "w-11 h-11 text-[16px] mr-3.5"
       : "w-10 h-10 text-[15px] mr-3";
   const textCls =
-    size === "sm" ? "text-base" : size === "lg" ? "text-[19px]" : "text-lg";
+    size === "sm" ? "text-base" : size === "lg" ? "text-[19px]" : "text-base";
 
   return (
     <button
@@ -40,11 +40,12 @@ export default function OptionButton({
         className
       )}
       style={{
-        background: selected
-          ? "linear-gradient(180deg, rgba(255,255,255,0.2), rgba(255,255,255,0.2))"
-          : "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00))",
+        background: selected ? "rgba(255,255,255,0.15)" : "transparent",
+        backdropFilter: selected ? "blur(40px)" : undefined,
+        WebkitBackdropFilter: selected ? "blur(40px)" : undefined,
+
         border: selected
-          ? "1px solid rgba(255,255,255,0.4)"
+          ? "1px solid rgba(255,255,255,0.2)"
           : "1px solid rgba(255,255,255,0.2)",
         boxShadow: selected
           ? "inset 0 1px 0 rgba(255,255,255,0.12), 0 6px 30px rgba(0,0,0,0.6)"
@@ -67,7 +68,7 @@ export default function OptionButton({
       <div
         className={`flex-1 ${align === "center" ? "flex justify-center" : ""}`}
       >
-        <span className={`${textCls} font-medium leading-snug`}>
+        <span className={`${textCls} font-regular leading-snug`}>
           {children}
         </span>
       </div>
