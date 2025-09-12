@@ -19,7 +19,7 @@ export default function Home() {
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") goDiscover();
         }}
-        className='min-h-dvh bg-black relative cursor-pointer select-none outline-none'
+        className='min-h-dvh bg-black relative cursor-pointer select-none outline-none max-w-md mx-auto'
       >
         <div className='absolute inset-0 grid place-items-center pointer-events-none'>
           <Image
