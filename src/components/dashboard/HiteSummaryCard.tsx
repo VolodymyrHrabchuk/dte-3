@@ -27,6 +27,14 @@ type StoredAnswer = {
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
+const KEYS = {
+  base: "hiteBase",
+  dteCompleted: "dteCompletedPoints",
+  dteStreak: "dteStreakPoints",
+  kcBonus: "kcCorrectBonus",
+  level: "level",
+} as const;
+
 const toInt = (v: string | null, def = 0) => {
   const n = parseInt(v ?? "", 10);
   return Number.isFinite(n) ? n : def;
@@ -47,24 +55,32 @@ function computeKcBonusFallback(): number {
 }
 
 function computeFromLS(fallbackScore: number, fallbackLevel: string) {
-  const base = toInt(localStorage.getItem("hiteBase"), fallbackScore);
-  const dteCompleted = toInt(localStorage.getItem("dteCompletedPoints"), 100);
-  const dteStreak = toInt(localStorage.getItem("dteStreakPoints"), 7);
+  const base = toInt(localStorage.getItem(KEYS.base), fallbackScore);
+
+  const hasCalculated =
+    localStorage.getItem(KEYS.dteCompleted) !== null ||
+    localStorage.getItem(KEYS.dteStreak) !== null ||
+    localStorage.getItem(KEYS.kcBonus) !== null;
+
+  if (!hasCalculated) {
+    return { finalScore: fallbackScore, badge: fallbackLevel };
+  }
+
+  const dteCompleted = toInt(localStorage.getItem(KEYS.dteCompleted), 0);
+  const dteStreak = toInt(localStorage.getItem(KEYS.dteStreak), 0);
+
   const kcBonus =
-    localStorage.getItem("kcCorrectBonus") !== null
-      ? toInt(localStorage.getItem("kcCorrectBonus"), 0)
+    localStorage.getItem(KEYS.kcBonus) !== null
+      ? toInt(localStorage.getItem(KEYS.kcBonus), 0)
       : computeKcBonusFallback();
 
   const finalScore = base + dteCompleted + dteStreak + kcBonus;
 
-  const saved = localStorage.getItem("level");
+  const savedLevel = localStorage.getItem(KEYS.level);
   const derived =
-    dteCompleted + dteStreak + kcBonus > 0 ? "Starter" : fallbackLevel;
+    savedLevel ?? (finalScore > fallbackScore ? "Starter" : fallbackLevel);
 
-  return {
-    finalScore,
-    badge: saved ?? derived,
-  };
+  return { finalScore, badge: derived };
 }
 
 export default function HiteSummaryCard({
@@ -93,11 +109,14 @@ export default function HiteSummaryCard({
 
   React.useEffect(() => {
     recalc();
+
     const onVis = () => document.visibilityState === "visible" && recalc();
     const onStorage = () => recalc();
     document.addEventListener("visibilitychange", onVis);
     window.addEventListener("storage", onStorage);
+
     window.addEventListener("hite:score-updated", recalc as EventListener);
+
     return () => {
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("storage", onStorage);
@@ -239,6 +258,7 @@ export default function HiteSummaryCard({
             </div>
           </div>
         </div>
+
         <button
           type='button'
           onClick={onShowMore}

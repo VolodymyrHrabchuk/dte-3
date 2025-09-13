@@ -46,7 +46,7 @@ const Timer: React.FC<TimerProps> = ({
   const dingUnlockedRef = useRef(false);
 
   useEffect(() => {
-    const a = new Audio("/ding.mp3"); 
+    const a = new Audio("/ding.mp3");
     a.preload = "auto";
     a.volume = 0.8;
     dingRef.current = a;
@@ -68,9 +68,7 @@ const Timer: React.FC<TimerProps> = ({
       a.currentTime = 0;
       a.muted = false;
       dingUnlockedRef.current = true;
-    } catch {
-
-    }
+    } catch {}
   };
 
   const playDing = () => {
@@ -84,14 +82,12 @@ const Timer: React.FC<TimerProps> = ({
     }
   };
 
-
   const [isRunning, setIsRunning] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [displaySeconds, setDisplaySeconds] = useState(0);
   const [rotationCount, setRotationCount] = useState(0);
   const [currentAngle, setCurrentAngle] = useState(-90);
-
 
   const startedAtRef = useRef<number | null>(null);
   const rafActiveRef = useRef(false);
@@ -103,19 +99,18 @@ const Timer: React.FC<TimerProps> = ({
       .toString()
       .padStart(2, "0");
     const s = (displaySeconds % 60).toString().padStart(2, "0");
+    window.dispatchEvent(new Event("flashcards:timer-started"));
     return `${m}:${s}`;
   }, [displaySeconds]);
-
 
   const setProgressFrame = (elapsedMs: number) => {
     const totalMs = timer * 1000;
     const clamped = Math.min(elapsedMs, totalMs);
 
-    
     const degPerSec = 18;
-    const rotationPeriodMs = (360 / degPerSec) * 1000; 
+    const rotationPeriodMs = (360 / degPerSec) * 1000;
     const turn = Math.floor(clamped / rotationPeriodMs);
-    const phase = (clamped % rotationPeriodMs) / rotationPeriodMs; 
+    const phase = (clamped % rotationPeriodMs) / rotationPeriodMs;
 
     const angleDeg = -90 + phase * 360;
     const angleRad = (angleDeg * Math.PI) / 180;
@@ -176,7 +171,6 @@ const Timer: React.FC<TimerProps> = ({
     }
   };
 
-  
   const ensureBreathTimeline = () => {
     const el = breathCircleRef.current;
     if (!el) return;
@@ -219,10 +213,8 @@ const Timer: React.FC<TimerProps> = ({
     if (isPaused) tl.pause();
   };
 
-
   useEffect(() => {
     if (!isRunning || isPaused) return;
-
 
     if (overlayRef.current && displaySeconds === 0) {
       gsap.fromTo(

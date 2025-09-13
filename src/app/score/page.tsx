@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
@@ -138,6 +138,29 @@ export default function ScorePage() {
 
   const totalTarget = completedTarget + streakTarget + correctTarget;
 
+
+  const persistedRef = useRef(false);
+  const persistScore = useCallback(() => {
+    if (persistedRef.current) return;
+    persistedRef.current = true;
+
+    try {
+      localStorage.setItem("dteCompletedPoints", String(completedTarget));
+      localStorage.setItem("dteStreakPoints", String(streakTarget));
+      localStorage.setItem("kcCorrectBonus", String(correctTarget));
+      localStorage.setItem("hiteBase", String(HITE_BASE)); 
+      if (totalTarget > 0) {
+        localStorage.setItem("level", "Starter");
+      }
+
+      window.dispatchEvent(new Event("hite:score-updated"));
+ 
+      window.dispatchEvent(new Event("planprogress:updated"));
+    } catch {
+      
+    }
+  }, [completedTarget, streakTarget, correctTarget, HITE_BASE, totalTarget]);
+
   useEffect(() => {
     const baseDelay = 0.35;
 
@@ -148,6 +171,7 @@ export default function ScorePage() {
     correctMV.set(0);
     totalMV.set(0);
     setXpLevel("Rookie");
+    persistedRef.current = false; 
 
     const ctrls: { stop: () => void }[] = [];
 
@@ -203,7 +227,10 @@ export default function ScorePage() {
         duration: 1.6,
         ease: EASE,
         delay: baseDelay + (correctTarget > 0 ? 2.4 : 1.9),
-        onComplete: () => setXpLevel("Starter"),
+        onComplete: () => {
+          setXpLevel("Starter");
+          persistScore(); // 
+        },
       })
     );
 
@@ -235,6 +262,7 @@ export default function ScorePage() {
     streakMV,
     correctMV,
     totalMV,
+    persistScore,
   ]);
 
   return (
@@ -386,7 +414,6 @@ export default function ScorePage() {
                   <HITEIcon />
                   <span className='font-medium text-lg'>HITE Score</span>
 
-                  {/* BADGE */}
                   <div className='font-medium text-[10px] rounded-4xl'>
                     <AnimatePresence mode='wait' initial={false}>
                       <motion.span
@@ -457,7 +484,11 @@ export default function ScorePage() {
 
           <div className='pt-8 '>
             <Link href='/feedback' className='block'>
-              <Button variant='text' className='w-full'>
+              <Button
+                variant='text'
+                className='w-full'
+                onClick={persistScore} 
+              >
                 Next
               </Button>
             </Link>

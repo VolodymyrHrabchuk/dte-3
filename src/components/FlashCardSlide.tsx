@@ -8,7 +8,7 @@ import BookmarkButton from "./ui/BookmarkButton";
 import TextArea from "./ui/TextArea";
 import Timer from "./timer/Timer";
 import Swiper from "swiper";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Button from "./ui/Button";
 import { createPortal } from "react-dom";
 
@@ -21,8 +21,11 @@ type FlashcardSlideProps = {
   onUserInputChange: (value: string) => void;
   swiper: Swiper | null;
   onComplete?: () => void;
-  onBack?: () => void; // ⬅️ Новое
+  onBack?: () => void;
 };
+
+
+const TIMER_STARTED_EVT = "flashcards:timer-started";
 
 export default function FlashcardSlide({
   card,
@@ -33,7 +36,7 @@ export default function FlashcardSlide({
   onUserInputChange,
   swiper,
   onComplete,
-  onBack, // ⬅️ Новое
+  onBack,
 }: FlashcardSlideProps) {
   const [bookmarked, setBookmarked] = useState(false);
 
@@ -56,11 +59,75 @@ export default function FlashcardSlide({
     }
   };
 
+
+  const [timerKey, setTimerKey] = useState(0);
+  const lastResetAtRef = useRef(0);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  const getScrollParent = (node: HTMLElement | null): HTMLElement | Window => {
+    let el: HTMLElement | null = node?.parentElement ?? null;
+    while (el && el !== document.body) {
+      const st = getComputedStyle(el);
+      if (/(auto|scroll)/.test(st.overflowY)) return el;
+      el = el.parentElement;
+    }
+    return window;
+  };
+
+  useEffect(() => {
+    if (!(card.type === "timer" && isActiveNow)) return;
+
+    const resetTimer = () => {
+      const now = performance.now();
+      if (now - lastResetAtRef.current < 500) return; 
+      lastResetAtRef.current = now;
+      setTimerKey((k) => k + 1);
+    };
+
+    const scrollTarget = getScrollParent(rootRef.current);
+    const onScroll = () => resetTimer();
+    const onWheel = () => resetTimer();
+    const onTouchMove = () => resetTimer();
+
+    (scrollTarget as HTMLElement | Window).addEventListener(
+      "scroll",
+      onScroll as EventListener,
+      { passive: true } as AddEventListenerOptions
+    );
+    window.addEventListener("wheel", onWheel as EventListener, {
+      passive: true,
+    });
+    window.addEventListener("touchmove", onTouchMove as EventListener, {
+      passive: true,
+    });
+
+    return () => {
+      (scrollTarget as HTMLElement | Window).removeEventListener(
+        "scroll",
+        onScroll as EventListener
+      );
+      window.removeEventListener("wheel", onWheel as EventListener);
+      window.removeEventListener("touchmove", onTouchMove as EventListener);
+    };
+  }, [card.type, isActiveNow]);
+
+  const [hasTimerStarted, setHasTimerStarted] = useState(false);
+
+  useEffect(() => {
+
+    setHasTimerStarted(false);
+    const onStarted = () => setHasTimerStarted(true);
+    window.addEventListener(TIMER_STARTED_EVT, onStarted);
+    return () => window.removeEventListener(TIMER_STARTED_EVT, onStarted);
+  }, []);
+
+  const showSwipe = hasTimerStarted; 
+
   return (
-    <div className='h-full flex flex-col'>
+    <div ref={rootRef} className='h-full flex flex-col'>
       <BackButton
         onClick={() => {
-          if (onBack) return onBack(); // ⬅️ поддержка внешнего back
+          if (onBack) return onBack();
           if (index > 0) swiper?.slidePrev();
         }}
         className='z-10 mt-[1.5rem] mb-6'
@@ -86,7 +153,7 @@ export default function FlashcardSlide({
             </div>
 
             <div className='flex-col items-center justify-center'>
-              <Timer timer={60} className='mx-auto' />
+              <Timer key={timerKey} timer={60} className='mx-auto' />
             </div>
           </div>
         )}
@@ -127,14 +194,14 @@ export default function FlashcardSlide({
         )}
       </div>
 
-      {/* свайп-подсказка только на первом */}
-      {index === 0 /* ⬅️ фикс */ && (
+
+      {showSwipe && index < 1 && (
         <div className='flex justify-center mb-[4.125rem]'>
           <SwipeIcon />
         </div>
       )}
 
-      {/* Submit */}
+
       {card.type === "input" && hasTyped && isActiveNow && mounted
         ? createPortal(
             <div className='fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom,0px)+18px)] z-[1000]'>

@@ -1,7 +1,13 @@
 // app/dashboard/page.tsx
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import HiteSummaryCard from "@/components/dashboard/HiteSummaryCard";
@@ -153,11 +159,33 @@ export default function DashboardDemoInner() {
     setModalFor(null);
   };
 
-  const shouldShowAllDoneCard =
-    showAllDoneOnce ||
-    (discoverState === "completed" &&
-      trainState === "completed" &&
-      executeState === "completed");
+  const shouldShowAllDoneCard = useMemo(
+    () =>
+      showAllDoneOnce ||
+      (discoverState === "completed" &&
+        trainState === "completed" &&
+        executeState === "completed"),
+    [showAllDoneOnce, discoverState, trainState, executeState]
+  );
+
+  const clearedStoragesRef = useRef(false);
+
+  useEffect(() => {
+    if (!shouldShowAllDoneCard || clearedStoragesRef.current) return;
+
+    const t = setTimeout(() => {
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch {
+        // ignore
+      }
+
+      clearedStoragesRef.current = true;
+    }, 3000);
+
+    return () => clearTimeout(t);
+  }, [shouldShowAllDoneCard]);
 
   return (
     <div className='absolute inset-0 flex items-center justify-center'>
