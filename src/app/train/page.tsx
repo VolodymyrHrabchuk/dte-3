@@ -2,8 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Flashcards, { FlashcardsContent } from "@/components/Flashcards";
-import { completeTrainMakeExecuteAvailable } from "@/lib/planProgress";
+import dynamic from "next/dynamic";
+
+const Flashcards = dynamic(() => import("@/components/Flashcards"), {
+  ssr: false,
+});
+
+import type { FlashcardsContent } from "@/components/Flashcards";
 
 const isVideoSrc = (src: string) => /\.mp4$|\.webm$|\.ogg$/i.test(src ?? "");
 
@@ -15,11 +20,15 @@ export default function TrainPage() {
 
   // 🔊 swipe sound
   const swipeAudioRef = useRef<HTMLAudioElement | null>(null);
+
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (typeof Audio === "undefined") return;
+
     const a = new Audio("/swipe.mp3");
     a.preload = "auto";
     a.volume = 0.5;
-    // @ts-expect-error playsInline есть, но не в типах
+    // @ts-expect-error playsInline exists in browsers
     a.playsInline = true;
     swipeAudioRef.current = a;
 
@@ -35,12 +44,14 @@ export default function TrainPage() {
         })
         .catch(() => {});
     };
+
     window.addEventListener("pointerdown", unlock, { once: true });
 
     return () => {
       window.removeEventListener("pointerdown", unlock);
       if (swipeAudioRef.current) {
         swipeAudioRef.current.pause();
+        // clear src to release the resource
         swipeAudioRef.current.src = "";
         swipeAudioRef.current = null;
       }
@@ -95,7 +106,10 @@ export default function TrainPage() {
     playSwipe();
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
+    const { completeTrainMakeExecuteAvailable } = await import(
+      "@/lib/planProgress"
+    );
     completeTrainMakeExecuteAvailable();
     router.push("/dashboard");
   };
