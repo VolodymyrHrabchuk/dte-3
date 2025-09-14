@@ -251,9 +251,9 @@ export default function DashboardDemoInner() {
               <HiteSummaryCard
                 score={hiteScore}
                 level={level}
-                streakDays={activeStreak}
+                streakDays={activeStreak + (shouldShowAllDoneCard ? 1 : 0)}
                 weekLabel='This week'
-                plansDone={2}
+                plansDone={shouldShowAllDoneCard ? 3 : 2}
                 plansTotal={4}
                 timeSpent='1h 15m'
                 onShowMore={() => {}}

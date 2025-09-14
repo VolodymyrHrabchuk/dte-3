@@ -24,7 +24,6 @@ type FlashcardSlideProps = {
   onBack?: () => void;
 };
 
-
 const TIMER_STARTED_EVT = "flashcards:timer-started";
 
 export default function FlashcardSlide({
@@ -59,7 +58,6 @@ export default function FlashcardSlide({
     }
   };
 
-
   const [timerKey, setTimerKey] = useState(0);
   const lastResetAtRef = useRef(0);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -79,7 +77,7 @@ export default function FlashcardSlide({
 
     const resetTimer = () => {
       const now = performance.now();
-      if (now - lastResetAtRef.current < 500) return; 
+      if (now - lastResetAtRef.current < 500) return;
       lastResetAtRef.current = now;
       setTimerKey((k) => k + 1);
     };
@@ -114,14 +112,22 @@ export default function FlashcardSlide({
   const [hasTimerStarted, setHasTimerStarted] = useState(false);
 
   useEffect(() => {
-
     setHasTimerStarted(false);
-    const onStarted = () => setHasTimerStarted(true);
+
+    let rafId = 0;
+    const onStarted = () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => setHasTimerStarted(true));
+    };
+
     window.addEventListener(TIMER_STARTED_EVT, onStarted);
-    return () => window.removeEventListener(TIMER_STARTED_EVT, onStarted);
+    return () => {
+      window.removeEventListener(TIMER_STARTED_EVT, onStarted);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
   }, []);
 
-  const showSwipe = hasTimerStarted; 
+  const showSwipe = hasTimerStarted;
 
   return (
     <div ref={rootRef} className='h-full flex flex-col'>
@@ -194,13 +200,11 @@ export default function FlashcardSlide({
         )}
       </div>
 
-
       {showSwipe && index < 1 && (
         <div className='flex justify-center mb-[4.125rem]'>
           <SwipeIcon />
         </div>
       )}
-
 
       {card.type === "input" && hasTyped && isActiveNow && mounted
         ? createPortal(
