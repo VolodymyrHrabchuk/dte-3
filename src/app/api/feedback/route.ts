@@ -95,7 +95,6 @@ export async function POST(req: NextRequest) {
             "length_choice",
             "days_per_week",
             "notes",
-            "free_text",
             "meta_json",
             "user_agent",
           ]],

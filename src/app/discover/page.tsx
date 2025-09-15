@@ -130,7 +130,7 @@ export default function DiscoverPage() {
             <OptionButton
               key={key}
               align='left'
-              selected={flashIdx === i || key === "lead-improve"} 
+              selected={flashIdx === i || key === "breakthrough"}
               onClick={() =>
                 flashThen(i, () => {
                   try {

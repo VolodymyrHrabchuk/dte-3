@@ -10,8 +10,8 @@ interface TimerProps {
   timer: number;
   onComplete?: () => void;
   className?: string;
-  inhaleSec?: number; // 5 c
-  exhaleSec?: number; // 5 c
+  inhaleSec?: number; // 5
+  exhaleSec?: number; // 5
   breathMinRatio?: number; // 0.6
   breathMaxRatio?: number; // 0.9
 }
@@ -33,8 +33,7 @@ const Timer: React.FC<TimerProps> = ({
   const circumference = useMemo(() => radius * 2 * Math.PI, [radius]);
 
   // Refs
-  const progressCircleRef = useRef<SVGCircleElement | null>(null); // градиентный круг
-  const eraseMaskStrokeRef = useRef<SVGCircleElement | null>(null); // штрих в маске (вырезает)
+  const progressCircleRef = useRef<SVGCircleElement | null>(null);
   const progressDotRef = useRef<SVGCircleElement | null>(null);
   const breathCircleRef = useRef<SVGCircleElement | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
@@ -63,7 +62,7 @@ const Timer: React.FC<TimerProps> = ({
     if (!a || dingUnlockedRef.current) return;
     try {
       a.muted = true;
-      await a.play();
+      await a.play(); // разблокируем авто-воспроизведение жестом
       a.pause();
       a.currentTime = 0;
       a.muted = false;
@@ -77,17 +76,13 @@ const Timer: React.FC<TimerProps> = ({
     try {
       a.currentTime = 0;
       void a.play().catch(() => {});
-    } catch {
-      /* ignore */
-    }
+    } catch {}
   };
 
   const [isRunning, setIsRunning] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [displaySeconds, setDisplaySeconds] = useState(0);
-  const [rotationCount, setRotationCount] = useState(0);
-  const [currentAngle, setCurrentAngle] = useState(-90);
 
   const startedAtRef = useRef<number | null>(null);
   const rafActiveRef = useRef(false);
@@ -99,82 +94,33 @@ const Timer: React.FC<TimerProps> = ({
       .toString()
       .padStart(2, "0");
     const s = (displaySeconds % 60).toString().padStart(2, "0");
-    window.dispatchEvent(new Event("flashcards:timer-started"));
     return `${m}:${s}`;
   }, [displaySeconds]);
 
   const setProgressFrame = (elapsedMs: number) => {
-    const totalMs = timer * 1000;
+    const totalMs = Math.max(1, timer * 1000);
     const clamped = Math.min(elapsedMs, totalMs);
+    const progress = clamped / totalMs;
 
-    const degPerSec = 18;
-    const rotationPeriodMs = (360 / degPerSec) * 1000;
-    const turn = Math.floor(clamped / rotationPeriodMs);
-    const phase = (clamped % rotationPeriodMs) / rotationPeriodMs;
-
-    const angleDeg = -90 + phase * 360;
-    const angleRad = (angleDeg * Math.PI) / 180;
-
-    if (turn !== rotationCount) setRotationCount(turn);
-    setCurrentAngle(((angleDeg + 90) % 360) - 90);
-
-    const endPos = circumference * phase;
-    const EPS = 0.0001;
-    const isDrawTurn = turn % 2 === 0;
-
+    const dashOffset = circumference * (1 - progress);
     if (progressCircleRef.current) {
-      if (isDrawTurn) {
-        const visibleLen = Math.min(
-          circumference - EPS,
-          Math.max(EPS, phase * circumference)
-        );
-        let offset = (endPos - visibleLen) % circumference;
-        if (offset < 0) offset += circumference;
-
-        gsap.set(progressCircleRef.current, {
-          strokeDasharray: `${visibleLen} ${circumference - visibleLen}`,
-          strokeDashoffset: offset,
-        });
-
-        if (eraseMaskStrokeRef.current) {
-          gsap.set(eraseMaskStrokeRef.current, {
-            strokeDasharray: `0 ${circumference}`,
-            strokeDashoffset: 0,
-          });
-        }
-      } else {
-        gsap.set(progressCircleRef.current, {
-          strokeDasharray: `${circumference} 0`,
-          strokeDashoffset: 0,
-        });
-
-        if (eraseMaskStrokeRef.current) {
-          const eraseLen = Math.min(
-            circumference - EPS,
-            Math.max(EPS, phase * circumference)
-          );
-          let offset = (endPos - eraseLen - circumference / 4) % circumference;
-          if (offset < 0) offset += circumference;
-
-          gsap.set(eraseMaskStrokeRef.current, {
-            strokeDasharray: `${eraseLen} ${circumference - eraseLen}`,
-            strokeDashoffset: offset,
-          });
-        }
-      }
+      progressCircleRef.current.style.strokeDasharray = `${circumference}`;
+      progressCircleRef.current.style.strokeDashoffset = `${dashOffset}`;
     }
 
+    const angleDeg = -90 + progress * 360;
+    const angleRad = (angleDeg * Math.PI) / 180;
     if (progressDotRef.current) {
       const cx = size / 2 + radius * Math.cos(angleRad);
       const cy = size / 2 + radius * Math.sin(angleRad);
-      gsap.set(progressDotRef.current, { cx, cy });
+      progressDotRef.current.setAttribute("cx", String(cx));
+      progressDotRef.current.setAttribute("cy", String(cy));
     }
   };
 
   const ensureBreathTimeline = () => {
     const el = breathCircleRef.current;
-    if (!el) return;
-    if (breathTLRef.current) return;
+    if (!el || breathTLRef.current) return;
 
     const minR = radius * breathMinRatio;
     const maxR = radius * breathMaxRatio;
@@ -187,31 +133,29 @@ const Timer: React.FC<TimerProps> = ({
       repeat: -1,
       defaults: { ease: "power1.inOut" },
     });
+    const toMaxFirst = Math.abs(currentR - maxR) < Math.abs(currentR - minR);
 
-    const distToMax = Math.abs(currentR - maxR);
-    const distToMin = Math.abs(currentR - minR);
-
-    if (distToMax < distToMin) {
+    if (toMaxFirst) {
       tl.to(el, { attr: { r: minR }, duration: Math.max(0.1, exhaleSec) }).to(
         el,
-        {
-          attr: { r: maxR },
-          duration: Math.max(0.1, inhaleSec),
-        }
+        { attr: { r: maxR }, duration: Math.max(0.1, inhaleSec) }
       );
     } else {
       tl.to(el, { attr: { r: maxR }, duration: Math.max(0.1, inhaleSec) }).to(
         el,
-        {
-          attr: { r: minR },
-          duration: Math.max(0.1, exhaleSec),
-        }
+        { attr: { r: minR }, duration: Math.max(0.1, exhaleSec) }
       );
     }
 
     breathTLRef.current = tl;
     if (isPaused) tl.pause();
   };
+
+  useEffect(() => {
+    if (isRunning && displaySeconds === 0) {
+      window.dispatchEvent(new Event("flashcards:timer-started"));
+    }
+  }, [isRunning]);
 
   useEffect(() => {
     if (!isRunning || isPaused) return;
@@ -223,25 +167,17 @@ const Timer: React.FC<TimerProps> = ({
         { scale: 1, opacity: 1, duration: 0.6, ease: "power3.out" }
       );
     }
-    if (
-      progressCircleRef.current &&
-      eraseMaskStrokeRef.current &&
-      progressDotRef.current &&
-      displaySeconds === 0
-    ) {
-      gsap.set(progressCircleRef.current, {
-        strokeDasharray: `0 ${circumference}`,
-        strokeDashoffset: 0,
-      });
-      gsap.set(eraseMaskStrokeRef.current, {
-        strokeDasharray: `0 ${circumference}`,
-        strokeDashoffset: 0,
-      });
-      gsap.fromTo(
-        progressDotRef.current,
-        { scale: 0.85 },
-        { scale: 1, duration: 0.6, ease: "power3.out" }
-      );
+
+    if (progressCircleRef.current && displaySeconds === 0) {
+      progressCircleRef.current.style.strokeDasharray = `${circumference}`;
+      progressCircleRef.current.style.strokeDashoffset = `${circumference}`;
+      if (progressDotRef.current) {
+        gsap.fromTo(
+          progressDotRef.current,
+          { scale: 0.85 },
+          { scale: 1, duration: 0.6, ease: "power3.out" }
+        );
+      }
     }
 
     ensureBreathTimeline();
@@ -271,9 +207,7 @@ const Timer: React.FC<TimerProps> = ({
         breathTLRef.current?.kill();
         breathTLRef.current = null;
 
-        // === DING ===
         playDing();
-
         onComplete?.();
         return;
       }
@@ -299,7 +233,6 @@ const Timer: React.FC<TimerProps> = ({
 
   // Кнопки
   const handleStart = () => {
-    // разблокируем звук по юзер-жесту
     void unlockDing();
 
     if (isRunning || isComplete) return;
@@ -318,12 +251,9 @@ const Timer: React.FC<TimerProps> = ({
     setIsComplete(false);
     setIsPaused(false);
     setIsRunning(true);
-    setRotationCount(0);
-    setCurrentAngle(-90);
   };
 
   const handlePauseResume = () => {
-    // подстраховка: разблокируем тоже
     void unlockDing();
 
     if (!isRunning) return;
@@ -363,9 +293,7 @@ const Timer: React.FC<TimerProps> = ({
           breathTLRef.current?.kill();
           breathTLRef.current = null;
 
-          // === DING ===
           playDing();
-
           onComplete?.();
           return;
         }
@@ -376,7 +304,6 @@ const Timer: React.FC<TimerProps> = ({
   };
 
   const handleStop = () => {
-    // на всякий случай разблокировать тоже можно
     void unlockDing();
 
     rafActiveRef.current = false;
@@ -386,32 +313,16 @@ const Timer: React.FC<TimerProps> = ({
     accumElapsedRef.current = 0;
     lastWholeSecRef.current = 0;
     setDisplaySeconds(0);
-    setRotationCount(0);
-    setCurrentAngle(-90);
 
-    // Сброс окружностей/маски
     if (progressCircleRef.current) {
-      gsap.set(progressCircleRef.current, {
-        strokeDasharray: `0 ${circumference}`,
-        strokeDashoffset: 0,
-      });
+      progressCircleRef.current.style.strokeDasharray = `${circumference}`;
+      progressCircleRef.current.style.strokeDashoffset = `${circumference}`;
     }
-    if (eraseMaskStrokeRef.current) {
-      gsap.set(eraseMaskStrokeRef.current, {
-        strokeDasharray: `0 ${circumference}`,
-        strokeDashoffset: 0,
-      });
-    }
-
-    // Точка в верх
     if (progressDotRef.current) {
-      gsap.set(progressDotRef.current, {
-        cx: size / 2,
-        cy: size / 2 - radius,
-      });
+      progressDotRef.current.setAttribute("cx", String(size / 2));
+      progressDotRef.current.setAttribute("cy", String(size / 2 - radius));
     }
 
-    // Остановить дыхание и вернуть к спокойному радиусу
     const el = breathCircleRef.current;
     breathTLRef.current?.kill();
     breathTLRef.current = null;
@@ -446,7 +357,6 @@ const Timer: React.FC<TimerProps> = ({
               strokeWidth={strokeWidth}
             />
 
-            {/* градиенты + маска */}
             <defs>
               <linearGradient
                 id='progressGradient'
@@ -469,30 +379,8 @@ const Timer: React.FC<TimerProps> = ({
                 <stop offset='0%' stopColor='#60A5FA' />
                 <stop offset='100%' stopColor='#1E40AF' />
               </linearGradient>
-
-              <mask
-                id='eraseMask'
-                maskUnits='userSpaceOnUse'
-                maskContentUnits='userSpaceOnUse'
-              >
-                <rect width={size} height={size} fill='white' />
-                <circle
-                  ref={eraseMaskStrokeRef}
-                  cx={size / 2}
-                  cy={size / 2}
-                  r={radius}
-                  fill='none'
-                  stroke='black'
-                  strokeWidth={strokeWidth}
-                  strokeDasharray={`0 ${circumference}`}
-                  strokeDashoffset={0}
-                  transform={`rotate(-90 ${size / 2} ${size / 2})`}
-                  strokeLinecap='butt'
-                />
-              </mask>
             </defs>
 
-            {/* дыхание */}
             {state !== "initial" && (
               <circle
                 ref={breathCircleRef}
@@ -504,7 +392,6 @@ const Timer: React.FC<TimerProps> = ({
               />
             )}
 
-            {/* прогресс под маской */}
             {state !== "initial" && (
               <circle
                 ref={progressCircleRef}
@@ -514,15 +401,13 @@ const Timer: React.FC<TimerProps> = ({
                 fill='none'
                 stroke='url(#progressGradient)'
                 strokeWidth={strokeWidth}
-                strokeDasharray={`0 ${circumference}`}
-                strokeDashoffset={0}
+                strokeDasharray={circumference}
+                strokeDashoffset={circumference}
                 transform={`rotate(-90 ${size / 2} ${size / 2})`}
                 strokeLinecap='round'
-                mask='url(#eraseMask)'
               />
             )}
 
-            {/* метки */}
             <g fill='#FFFFFF'>
               <rect x={size / 2 - 2} y={0} width='4' height='24' rx='2' />
               <rect
@@ -542,7 +427,6 @@ const Timer: React.FC<TimerProps> = ({
               <rect x={0} y={size / 2 - 2} width='24' height='4' rx='2' />
             </g>
 
-            {/* бегущая точка */}
             {state !== "initial" && (
               <circle
                 ref={progressDotRef}
@@ -554,7 +438,6 @@ const Timer: React.FC<TimerProps> = ({
             )}
           </svg>
 
-          {/* центр — поверх круга */}
           <div
             ref={overlayRef}
             className='absolute inset-0 flex items-center justify-center'
@@ -579,7 +462,6 @@ const Timer: React.FC<TimerProps> = ({
 
       {state !== "initial" && (
         <div className='pointer-events-auto -mt-1 flex items-center justify-between gap-4 w-full'>
-          {/* Стоп */}
           <button
             type='button'
             onClick={handleStop}
@@ -601,7 +483,6 @@ const Timer: React.FC<TimerProps> = ({
             </svg>
           </button>
 
-          {/* Пауза / Продолжить */}
           <button
             type='button'
             onClick={handlePauseResume}
