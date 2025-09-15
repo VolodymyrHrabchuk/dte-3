@@ -21,7 +21,7 @@ function quoteA1Sheet(sheetName: string) {
   return `'${safe}'`;
 }
 
-// Защита от формульных инъекций в Google Sheets
+
 function sanitize(val: unknown): string {
   const s = typeof val === "string" ? val : JSON.stringify(val ?? "");
   return /^[=+@\-\t]/.test(s) ? `'${s}` : s;
@@ -114,7 +114,6 @@ export async function POST(req: NextRequest) {
       sanitize(body.lengthChoice ?? ""),
       body.daysPerWeek ?? "",
       sanitize(body.notes ?? ""),
-      sanitize(body.freeText ?? ""),
       sanitize(body.meta ?? {}),
       sanitize(userAgent),
     ];
